@@ -10,6 +10,7 @@ dotenv.config({ path: '.env' });
 
 // initialise express
 const app = express();
+app.use(express.urlencoded({ extended: false }));
 
 // Set DynamoDB config
 const awsconfig = {
@@ -77,19 +78,90 @@ allMusic['songs'].forEach(function(music) {
 // set view engine to ejs
 app.set('view engine', 'ejs');
 
-// landing page method
+// redirecting root directory to login page
 app.get('/', (req, res) => {
-    res.render('index.ejs');
+    res.redirect('/login');
 });
 
 // login page method
 app.get('/login', (req, res) => {
-    res.render('login.ejs');
+    res.render('login.ejs', { message: "" });
+});
+
+app.post('/login', (req,res) => {
+
+    // Setting parameters for checking in database
+    var params = {
+       TableName: 'login',
+       FilterExpression: '#email = :email and #password = :password',
+       ExpressionAttributeNames: {
+           '#email': 'email',
+           '#password': 'password'
+       },
+       ExpressionAttributeValues: {
+           ':email': req.body.email,
+           ':password': req.body.password
+       }
+    };
+
+    // scan database for possible login duplication
+    docClient.scan(params, (err, data) => {
+        console.log(data);
+        if (data.Count == 1) {
+            res.redirect('/userArea');      // redirecting to userArea after successful login
+        } else {
+            res.render('login.ejs', { message: 'email or password is invalid' });
+        }
+    });
 });
 
 // register page method
 app.get('/register', (req, res) => {
-    res.render('register.ejs');
+    res.render('register.ejs', { message: ""});
 });
+
+// register page POST method
+app.post('/register', (req, res) => {
+
+    // Check if email aready exists
+    var params = {
+        TableName: 'login',
+        KeyConditionExpression: '#email = :email',
+        ExpressionAttributeNames: {
+            '#email': 'email'
+        },
+        ExpressionAttributeValues: {
+            ':email': req.body.email
+        }
+    };
+    // querying database for possible email duplication
+    docClient.query(params, (err, data) => {
+        if (data.Items == "") {
+            params = {
+                TableName: 'login',
+                Item: {
+                    email: req.body.email,
+                    username: req.body.username,
+                    password: req.body.password
+                }
+            }
+
+            docClient.put(params, (err) => {
+                if (err) {
+                    console.error('Unable to add user to database');
+                }
+            });
+            res.redirect('/login');
+        }
+        else {
+            // Send error message to user
+            res.render('register.ejs', { message: 'The email already exists' });
+        }
+    });
+});
+
+app.get('/userArea', (req, res) => {
+    res.render('userArea.ejs');
+})
 
 app.listen(8080);
