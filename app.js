@@ -1,5 +1,6 @@
 // importing necessary packages
 const express = require('express');
+const session = require('express-session');
 const dotenv = require('dotenv');
 const fs = require('fs');
 const AWS = require('aws-sdk');
@@ -11,6 +12,7 @@ dotenv.config({ path: '.env' });
 // initialise express
 const app = express();
 app.use(express.urlencoded({ extended: false }));
+app.use(session({ secret: 'secret', saveUninitialized: true, resave: false }));
 
 // Set DynamoDB config
 const awsconfig = {
@@ -106,8 +108,10 @@ app.post('/login', (req,res) => {
 
     // scan database for possible login duplication
     docClient.scan(params, (err, data) => {
-        console.log(data);
         if (data.Count == 1) {
+            data.Items.forEach((item) => {
+                req.session.username = item.username;   // assigning username to session variable for future use
+            });
             res.redirect('/userArea');      // redirecting to userArea after successful login
         } else {
             res.render('login.ejs', { message: 'email or password is invalid' });
