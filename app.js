@@ -3,8 +3,11 @@ const express = require('express');
 const session = require('express-session');
 const dotenv = require('dotenv');
 const fs = require('fs');
+const request = require('request');
+const path = require('path');
 const AWS = require('aws-sdk');
 const { LakeFormation } = require('aws-sdk');
+const { prototype } = require('aws-sdk/clients/acm');
 
 // Load Config
 dotenv.config({ path: '.env' });
@@ -17,7 +20,6 @@ app.use(session({ secret: 'secret', saveUninitialized: true, resave: false }));
 // Set DynamoDB config
 const awsconfig = {
     region: 'us-east-1',
-    endpoint: 'http://dynamodb.us-east-1.amazonaws.com',
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
 };
@@ -26,7 +28,8 @@ const awsconfig = {
 AWS.config.update(awsconfig);
 
 var docClient = new AWS.DynamoDB.DocumentClient();
-var dynamoDB = new AWS.DynamoDB();
+const dynamoDB = new AWS.DynamoDB();
+const s3 = new AWS.S3();
 
 // Creating parameters for create table - music
 var params = {
@@ -67,7 +70,7 @@ allMusic['songs'].forEach(function(music) {
             img_url: music.img_url
         }
     };
-    
+    // Making entries to database
     docClient.put(params, (err, data) => {
         if (err) {
             console.error('Unable to add music', music.title, ". Error JSON: ", JSON.stringify(err, null, 2));
@@ -165,7 +168,24 @@ app.post('/register', (req, res) => {
 });
 
 app.get('/userArea', (req, res) => {
-    res.render('userArea.ejs');
+
+    // Show all user subscribed music
+    var params = {
+        TableName: 'subscriptions',
+        KeyConditionExpression: '#username = :username',
+        ExpressionAttributeNames: {
+            '#username': 'username'
+        },
+        ExpressionAttributeValues: {
+            ':username': req.session.username
+        }
+    };
+
+    docClient.query(params, (err, data) => {
+        res.render('userArea.ejs', { username: req.session.username, data });
+    });
+
+    // Display results based on user query
 })
 
 app.listen(8080);

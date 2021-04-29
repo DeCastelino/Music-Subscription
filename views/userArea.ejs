@@ -1,1 +1,23 @@
-userArea
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Area | Music Subscription</title>
+</head>
+<body>
+    <div>
+        <a href=""></a><%= username %>
+    </div>
+    <hr>
+    <h2>Your Subscriptions</h2>
+    <div>
+        <% data.Items.forEach((item) => { %>
+            <%= item.title %>
+            <%= item.artist %>
+            <%= item.year %>
+        <% }) %>
+    </div>
+</body>
+</html>
