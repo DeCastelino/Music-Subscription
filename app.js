@@ -8,6 +8,7 @@ const path = require('path');
 const AWS = require('aws-sdk');
 const { LakeFormation } = require('aws-sdk');
 const { prototype } = require('aws-sdk/clients/acm');
+const { render } = require('ejs');
 
 // Load Config
 dotenv.config({ path: '.env' });
@@ -184,8 +185,26 @@ app.get('/userArea', (req, res) => {
     docClient.query(params, (err, data) => {
         res.render('userArea.ejs', { username: req.session.username, data });
     });
+});
 
-    // Display results based on user query
-})
+app.post('/removeSubscription/:id', (req, res) => {
+    const params = {
+        TableName: 'subscriptions',
+        Key: {
+            'username': req.session.username,
+            'title': req.params.id
+        }
+    };
+
+    docClient.delete(params, (err, data) => {
+        if (err) {
+            console.log('Unable to delete item.', JSON.stringify(err, null, 2));
+        }
+        else {
+            console.log('Deleted item successfully', JSON.stringify(data, null, 2));
+            res.redirect('/userArea');
+        }
+    });
+});
 
 app.listen(8080);
